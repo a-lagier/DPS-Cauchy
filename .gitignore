@@ -1,8 +1,8 @@
-./models/*
-./generated_data/progress/*
-./generated_data/*.png
-./TODO
-./test.py
-./datasets/cifar-10-batched-py
-./bkse
-./motionblur
+models/*
+generated_data/progress/*
+generated_data/*.png
+TODO
+test.py
+datasets/cifar-10-batched-py
+bkse/
+motionblur/
