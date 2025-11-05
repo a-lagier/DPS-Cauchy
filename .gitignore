@@ -4,3 +4,5 @@
 ./TODO
 ./test.py
 ./datasets/cifar-10-batched-py
+./bkse
+./motionblur
