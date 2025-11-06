@@ -144,7 +144,7 @@ class Inpainting(Operator):
         mask_size = kwargs.get('mask_size', 10)
         mask_density = kwargs.get('mask_density', 0.2)
 
-        self.mask = make_mask(image_size, mask_type, mask_size, mask_density).to(device)
+        self.mask = make_mask(image_size, mask_type, (mask_size, mask_size), mask_density).to(device)
 
     def transform(self, x):
         return x * self.mask

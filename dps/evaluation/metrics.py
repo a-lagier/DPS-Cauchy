@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 
+from ..utils import clip_to_pixel
+
 __METRIC__ = {}
 
 def register_metric(name):
@@ -25,12 +27,8 @@ class Metric():
         return []
     
     def prepare_data(self, x, y):
-
-        print('prepare data')
-        print(x.shape)
-        print(y.shape)
-
         assert x.size(0) == y.size(0)
+
         x = x.reshape(x.size(0), -1)
         y = y.reshape(y.size(0), -1)
 
@@ -55,6 +53,9 @@ class PSNR(Metric):
     
     def eval(self, x, y):
         x, y = self.prepare_data(x, y)
+
+        x = clip_to_pixel(x)
+        y = clip_to_pixel(y)
 
         mse = np.power(x - y, 2).mean(-1)
         max_ = x.max(-1)

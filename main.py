@@ -81,6 +81,7 @@ for index, img in enumerate(dataloader):
     if isinstance(img, list):
         img = img[0]
 
+    print(img.shape)
     img = img.to(device)
     batch_name = str(index).zfill(4) + ".png"
 
@@ -107,6 +108,5 @@ for index, img in enumerate(dataloader):
         plt.imsave(os.path.join(out_dir, "measure" + batch_name), prepare_image(y))
     else:
         plt.imsave(os.path.join(out_dir, batch_name), prepare_image(output))
-    break
 
 del model, dataset, dataloader

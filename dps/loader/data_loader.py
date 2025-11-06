@@ -33,6 +33,17 @@ def prepare_dataset(dataset_name, dataset_dir="./datasets/"):
 
     if dataset_name == "CIFAR10":
         dataset = torchvision.datasets.CIFAR10(root=dataset_dir, train=True, transform=transform, download=True)
+    if dataset_name == "CelebA":
+        # The link for downloading CelebA is temporary down
+        # dataset = torchvision.datasets.CelebA(root=dataset_dir, transform=transform, download=True)
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.CenterCrop(178),
+            transforms.Resize(256),
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+        ])
+        
+        dataset = SamplesDataset(os.path.join(dataset_dir, 'celeba'), transform=transform)
     else:
         dataset = SamplesDataset(os.path.join(dataset_dir, dataset_name), transform=transform)
         return dataset

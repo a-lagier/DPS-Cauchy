@@ -18,6 +18,6 @@ def load_parser() -> dict:
 def get_sample_size(cfg: dict) -> tuple:
     batch_size = cfg["batch_size"]
     channels = cfg["channels"]
-    sampling_size = cfg["sampling_size"]
+    sampling_size = (cfg["sampling_size"], cfg["sampling_size"])
 
-    return (batch_size, channels, sampling_size, sampling_size)
+    return (batch_size, channels, sampling_size[0], sampling_size[1])

@@ -16,6 +16,9 @@ def load_image(filename):
     return x
 
 def prepare_image(img):
+    if img.ndim == 4 and img.size(0) > 1:
+        img = img[0]
+
     img = img.detach().cpu().squeeze()
     img = torch.clamp((img + 1) / 2, 0, 1).numpy()
     return np.transpose(img, (1, 2, 0))
