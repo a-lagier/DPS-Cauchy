@@ -1,11 +1,11 @@
 import os
+import sys
 import argparse
 import yaml
 from functools import partial
 
 import torch
 import matplotlib.pyplot as plt
-from deepinv.utils.plotting import plot
 
 
 from dps.model.unet import UNet
@@ -75,19 +75,27 @@ else:
 
 sampler = Diffusion(size_noise=sample_size, beta_start=beta_start, beta_end=beta_end,
                     time_steps=T, model=model, device=device, logger=logger, metric=metric, measurement_step=measurement_step,
-                    enable_log=True, enable_batch_grad=use_conditional)
+                    enable_log=False, enable_batch_grad=use_conditional)
+
+# def tensor_size(x):
+#     # print(x.numel(), x.element_size())
+#     return x.numel() * x.element_size() / (1024**2)
+
+# def model_size(model):
+#     total = sum(p.numel() * p.element_size() for p in model.parameters())
+#     return total / (1024**2)
 
 for index, img in enumerate(dataloader):
     if isinstance(img, list):
         img = img[0]
 
-    print(img.shape)
     img = img.to(device)
     batch_name = str(index).zfill(4) + ".png"
 
     # check batch size reminder !!!!!!!!!!!!!!!!!
     # lazy fix for now
     if img.size(0) < batch_size:
+        print('Batch size is too large of the remaining data')
         break
 
     # perform noisy transformation
@@ -97,16 +105,16 @@ for index, img in enumerate(dataloader):
     else:
         y = None
 
-
     output = sampler.full_sampling(y=y, ground_truth=img)
 
-    logger.write_step(-1)
+    logger.write_step()
 
     if use_conditional:
+        plt.imsave(os.path.join(out_dir, "measure" + batch_name), prepare_image(y))
         plt.imsave(os.path.join(out_dir, "truth" + batch_name), prepare_image(img))
         plt.imsave(os.path.join(out_dir, "rec" + batch_name), prepare_image(output))
-        plt.imsave(os.path.join(out_dir, "measure" + batch_name), prepare_image(y))
     else:
         plt.imsave(os.path.join(out_dir, batch_name), prepare_image(output))
+    break
 
 del model, dataset, dataloader

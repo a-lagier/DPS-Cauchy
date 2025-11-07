@@ -3,11 +3,14 @@ import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import scipy
 
 from motionblur.motionblur import Kernel
 
+Tensor = torch.Tensor
+Device = torch.device
 
-def load_image(filename):
+def load_image(filename: str) -> Tensor:
     array = plt.imread(filename)
     x = torch.from_numpy(array).float()
     x = x[:,:,:3].permute(2, 0, 1)
@@ -15,51 +18,51 @@ def load_image(filename):
     x = x * 2 - 1
     return x
 
-def prepare_image(img):
+def prepare_image(img: Tensor) -> Tensor:
     if img.ndim == 4 and img.size(0) > 1:
         img = img[0]
 
     img = img.detach().cpu().squeeze()
-    img = torch.clamp((img + 1) / 2, 0, 1).numpy()
+    img = normalize(img).numpy()
     return np.transpose(img, (1, 2, 0))
 
-def normalize(image_tensor):
+def normalize(image_tensor: Tensor) -> Tensor:
     image_tensor -= image_tensor.min()
     image_tensor /= image_tensor.max()
     return image_tensor
 
-def batch(data):
+def batch(data: Tensor) -> Tensor:
     if data.ndim == 3:
         return data.unsqueeze(0)
     elif data.ndim == 2: # we assume gray scale here
         return data.unsqueeze(0).unsqueeze(0)
     return data
 
-def normalize_noise(x):
+def normalize_noise(x: Tensor) -> Tensor:
     ''' normalize x when its range lays on [-1, 1] or [0, 1]'''
     return x.clamp(-1, 1)
 
-def clip_to_noise(x):
+def clip_to_noise(x: Tensor) -> Tensor:
     ''' maps [0, 1] to [-1, 1]'''
     return 2.0 * x - 1.0
 
-def clip_to_img(x):
+def clip_to_img(x: Tensor) -> Tensor:
     ''' maps [-1, 1] to [0, 1]'''
     return (x + 1.0) / 2.0
 
-def clip_to_pixel(x):
+def clip_to_pixel(x: Tensor) -> Tensor:
     ''' maps [-1, 1] to [0,255]'''
     return (255 * normalize(x))
 
-def clip_to_noise_pixel(x):
+def clip_to_noise_pixel(x: Tensor) -> Tensor:
     ''' maps [0, 255] to [-1, 1]'''
     return clip_to_noise(x / 255.0)
 
-def img_range(x):
+def img_range(x: Tensor) -> Tensor:
     x_ = x.detach()
     return (x_.min().item(), x_.max().item())
 
-def make_mask(image_size, mask_type="box", mask_size=None, mask_density=None):
+def make_mask(image_size: tuple, mask_type: str = "box", mask_size: tuple = None, mask_density: float = None) -> Tensor:
     bsz, c, h, w = image_size
 
     if mask_type == "box":
@@ -91,7 +94,7 @@ def make_mask(image_size, mask_type="box", mask_size=None, mask_density=None):
 
 # This blur class was taken from the original paper
 class Blurkernel(nn.Module):
-    def __init__(self, blur_type='gaussian', kernel_size=31, std=3.0, device=None):
+    def __init__(self, blur_type: str = 'gaussian', kernel_size: int = 31, std: float = 3.0, device: Device = None):
         super().__init__()
         self.blur_type = blur_type
         self.kernel_size = kernel_size
@@ -104,7 +107,7 @@ class Blurkernel(nn.Module):
 
         self.weights_init()
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return self.seq(x)
 
     def weights_init(self):

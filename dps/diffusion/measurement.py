@@ -6,10 +6,12 @@ from motionblur.motionblur import Kernel
 
 from ..utils import make_mask, img_range, clip_to_noise, Blurkernel
 
+Tensor = torch.Tensor
+Device = torch.device
 
 __NOISE__ = {}
 
-def register_noise(name):
+def register_noise(name: str):
     def wrapper(cls):
         if __NOISE__.get(name, None):
             raise NameError(f"{name} already registerd")
@@ -28,13 +30,13 @@ class Noise():
         self.sampler = None
         return
     
-    def sample(self, size): # see distribution.sample_n
+    def sample(self, size: tuple) -> Tensor: # see distribution.sample_n
         return self.sampler.sample(sample_shape=size)
     
-    def apply(self, x):
+    def apply(self, x: Tensor) -> Tensor:
         return x + self.sample(x.shape).to(x.device)
     
-    def log_likelihood(self, target, x):
+    def log_likelihood(self, target: Tensor, x: Tensor) -> Tensor:
         return target - x
 
 @register_noise('gaussian')
@@ -57,7 +59,7 @@ class Poisson(Noise):
         self.rate = kwargs.get('rate', 1.0)
         self.sampler = torch.distributions.poisson.Poisson(rate=self.rate)
     
-    def apply(self, x):
+    def apply(self, x: Tensor) -> Tensor:
         # TODO : clean the noisy poisson implementation
         pixel_x = ((x + 1.0) * 255 / 2).int()
         pixel_out = pixel_x + self.sample(pixel_x.shape).to(x.device)
@@ -65,7 +67,7 @@ class Poisson(Noise):
         out = clip_to_noise(pixel_out.float() / 255.0)
         return out
 
-    def log_likelihood(self, target, x):
+    def log_likelihood(self, target: Tensor, x: Tensor) -> Tensor:
         z = torch.linalg.norm(target - x) / target.abs()
         return z.mean()
 
@@ -78,12 +80,12 @@ class Binomial(Noise):
         probs = kwargs.get('probs', 0.5)
         self.sampler = torch.distributions.binomial.Binomial(total_count=n, probs=probs)
 
-    def log_likelihood(self, target, x):
+    def log_likelihood(self, target: Tensor, x: Tensor) -> Tensor:
         raise NotImplementedError()
 
 __OPERATOR__ = {}
 
-def register_operator(name):
+def register_operator(name: str):
     def wrapper(cls):
         if __OPERATOR__.get(name, None):
             raise NameError(f"{name} already registerd")
@@ -101,13 +103,13 @@ class Operator():
     def __init__(self):
         return
 
-    def transform(self, x):
+    def transform(self, x: Tensor) -> Tensor:
         return
     
-    def inverse_transform(self, x):
+    def inverse_transform(self, x: Tensor) -> Tensor:
         return
     
-    def grad(self, x_next, x_prev, approx_x, y, noise, scale=1.0):
+    def grad(self, x_next: Tensor, x_prev: Tensor, approx_x: Tensor, y: Tensor, noise: Tensor, scale: float = 1.0) -> Tensor:
         Ax = self.transform(approx_x)
         data_fidelity = noise.log_likelihood(y, Ax)
         grad_ = torch.autograd.grad(outputs=data_fidelity, inputs=x_prev)[0]
@@ -119,23 +121,23 @@ class Operator():
 @register_operator('super-resolution')
 class SuperResolutionOperator(Operator):
 
-    def __init__(self, device, **kwargs):
+    def __init__(self, device: Device, **kwargs):
         super().__init__()
 
         self.device = device
         self.resolution_factor = kwargs.get('resolution_factor', 0.5)
 
-    def transform(self, x):
+    def transform(self, x: Tensor) -> Tensor:
         return F.interpolate(x, scale_factor=self.resolution_factor, mode='nearest') # change to find linear operator
     
-    def inverse_transform(self, x):
+    def inverse_transform(self, x: Tensor) -> Tensor:
         return F.interpolate(x, scale_factor=1./self.resolution_factor, mode="nearest")
 
 
 @register_operator('inpainting')
 class Inpainting(Operator):
 
-    def __init__(self, device, **kwargs):
+    def __init__(self, device: Device, **kwargs):
         super().__init__()
 
         self.device = device
@@ -146,10 +148,10 @@ class Inpainting(Operator):
 
         self.mask = make_mask(image_size, mask_type, (mask_size, mask_size), mask_density).to(device)
 
-    def transform(self, x):
+    def transform(self, x: Tensor) -> Tensor:
         return x * self.mask
     
-    def inverse_transform(self, x):
+    def inverse_transform(self, x: Tensor) -> Tensor:
         return super().inverse_transform(x)
 
 
@@ -157,7 +159,7 @@ class Inpainting(Operator):
 # This operator class was taken from the original paper
 @register_operator('motion-blur')
 class MotionBlur(Operator):
-    def __init__(self, device, **kwargs):
+    def __init__(self, device: Device, **kwargs):
         self.device = device
 
         kernel_size = kwargs.get('kernel_size', 3)
@@ -173,13 +175,13 @@ class MotionBlur(Operator):
         kernel = torch.tensor(self.kernel.kernelMatrix, dtype=torch.float32)
         self.conv.update_weights(kernel)
     
-    def transform(self, data):
+    def transform(self, data: Tensor) -> Tensor:
         return self.conv(data)
 
-    def inverse_transform(self, data):
+    def inverse_transform(self, data: Tensor) -> Tensor:
         return data
 
-    def get_kernel(self):
+    def get_kernel(self) -> Tensor:
         kernel = self.kernel.kernelMatrix.type(torch.float32).to(self.device)
         return kernel.view(1, 1, self.kernel_size, self.kernel_size)
 
@@ -187,7 +189,7 @@ class MotionBlur(Operator):
 # This operator class was taken from the original paper
 @register_operator('gaussian-blur')
 class GaussialBlur(Operator):
-    def __init__(self, device, **kwargs):
+    def __init__(self, device: Device, **kwargs):
         self.device = device
         
         kernel_size = kwargs.get('kernel_size', 3)
@@ -201,11 +203,41 @@ class GaussialBlur(Operator):
         self.kernel = self.conv.get_kernel()
         self.conv.update_weights(self.kernel.type(torch.float32))
 
-    def transform(self, data):
+    def transform(self, data: Tensor) -> Tensor:
         return self.conv(data)
 
-    def inverse_transform(self, data):
+    def inverse_transform(self, data: Tensor) -> Tensor:
         return data
 
-    def get_kernel(self):
+    def get_kernel(self) -> Tensor:
         return self.kernel.view(1, 1, self.kernel_size, self.kernel_size)
+
+
+@register_operator('phase-retrieval')
+class PhaseRetrieval(Operator):
+
+    def __init__(self, device: Device, **kwargs):
+        self.device = device
+        
+        oversample = kwargs.get("oversample", 2.0)
+        self.pad_dim = int(oversample / 8.0 * 256)
+
+    def transform(self, data: Tensor) -> Tensor:
+        data = F.pad(data, (self.pad_dim, ) * data.ndim)
+
+        if not torch.is_complex(data):
+            data = data.type(torch.complex64)
+    
+        data = torch.view_as_real(data)
+        data = torch.fft.ifftshift(data, dim=[-3, -2])
+        data = torch.view_as_complex(data)
+        data = torch.fft.fft2(data, norm='ortho')
+        data = torch.view_as_real(data)
+        data = torch.fft.fftshift(data, dim=[-3, -2])
+        data = torch.view_as_complex(data)
+        data = data.abs().float()
+
+        return data
+    
+    def inverse_transform(self, data: Tensor) -> Tensor:
+        return data

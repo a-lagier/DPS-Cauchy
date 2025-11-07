@@ -1,6 +1,6 @@
 import torch
 from torchvision import transforms
-import torchvision.datasets
+from torchvision.datasets import CIFAR10, CelebA
 from torch.utils.data import Dataset, DataLoader
 import os
 import matplotlib.pyplot as plt
@@ -25,17 +25,17 @@ class SamplesDataset(Dataset):
             image = self.transform(image)
         return image
 
-def prepare_dataset(dataset_name, dataset_dir="./datasets/"):
+def prepare_dataset(dataset_name: str, dataset_dir: str = "./datasets/") -> Dataset:
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize([.5, .5, .5], [.5, .5, .5])
     ])
 
     if dataset_name == "CIFAR10":
-        dataset = torchvision.datasets.CIFAR10(root=dataset_dir, train=True, transform=transform, download=True)
-    if dataset_name == "CelebA":
+        dataset = CIFAR10(root=dataset_dir, train=True, transform=transform, download=True)
+    elif dataset_name == "CelebA":
         # The link for downloading CelebA is temporary down
-        # dataset = torchvision.datasets.CelebA(root=dataset_dir, transform=transform, download=True)
+        # dataset = CelebA(root=dataset_dir, transform=transform, download=True)
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.CenterCrop(178),
@@ -44,12 +44,15 @@ def prepare_dataset(dataset_name, dataset_dir="./datasets/"):
         ])
         
         dataset = SamplesDataset(os.path.join(dataset_dir, 'celeba'), transform=transform)
+    elif dataset_name == "MiniImageNet":
+        pass
+        # dataset = torchvision.datasets.MiniImageNet(root=dataset_dir, transform=transform, download=True)
     else:
         dataset = SamplesDataset(os.path.join(dataset_dir, dataset_name), transform=transform)
         return dataset
     
     return dataset
 
-def prepare_dataloader(dataset, batch_size=1):
+def prepare_dataloader(dataset: Dataset, batch_size: str = 1) -> DataLoader:
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 

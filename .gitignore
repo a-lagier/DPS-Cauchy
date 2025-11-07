@@ -7,3 +7,5 @@ datasets/*celeba*
 datasets/*cifar*
 bkse/
 motionblur/
+.vscode/
+lab_ddpm.ipynb

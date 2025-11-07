@@ -4,10 +4,15 @@ import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from ..utils import normalize, prepare_image, clip_to_img, clip_to_noise, img_range, normalize_noise, clip_to_pixel, clip_to_noise_pixel
+from ..evaluation.metrics import Metric
+from ..loggers.logger import Logger
+from ..model.unet import UNet
+from ..utils import prepare_image
 
+Tensor = torch.Tensor
+Device = torch.device
 
-def interpolate(v_start, v_end, time_steps, mode="linear"):
+def interpolate(v_start: float, v_end: float, time_steps: int, mode: str = "linear") -> Tensor:
     # TODO : implement other interpolation method (cosine)
     if mode == "linear":
         out = np.linspace(v_start, v_end, time_steps)
@@ -19,17 +24,17 @@ class Diffusion():
 
     # in this setting we suppose T = N
     def __init__(self,
-                size_noise,
-                beta_start,
-                beta_end,
-                time_steps,
-                model,
-                device,
-                logger,
-                metric,
-                measurement_step=None,
-                enable_batch_grad=False,
-                enable_log=True):
+                size_noise: tuple,
+                beta_start: float,
+                beta_end: float,
+                time_steps: int,
+                model: UNet,
+                device: Device,
+                logger: Logger,
+                metric: Metric,
+                measurement_step: bool = None,
+                enable_batch_grad: bool = False,
+                enable_log: bool = True):
         self.size_noise = size_noise
 
         self.beta_start = beta_start
@@ -69,13 +74,13 @@ class Diffusion():
         self.coef_next_1 = self.betas * torch.sqrt(alphas_bar_prev) / (1.0-alphas_bar)
         self.coef_next_2 = (1.0 - alphas_bar_prev) * torch.sqrt(alphas) / (1.0 - alphas_bar)
 
-    def to(self, device):
+    def to(self, device: Device):
         self.model.to(device)
         self.betas.to(device)
         self.alphas.to(device)
         self.alphas.to(device)
 
-    def compute_mean(self, x_i, s_theta_mean, step):
+    def compute_mean(self, x_i: Tensor, s_theta_mean: Tensor, step: int) -> Tensor:
         # line 4 of algorithm 1
         approx_x = self.coef_mean_1[step] * x_i + \
                    self.coef_mean_2[step] * s_theta_mean
@@ -85,7 +90,8 @@ class Diffusion():
 
         return approx_x, posterior_mean
 
-    def compute_variance(self, s_theta_var, step):
+    def compute_variance(self, s_theta_var: Tensor, step: int) -> Tensor:
+        # TODO : we do not need s_theta_var
         if step == 0:
             return torch.zeros_like(s_theta_var)
 
@@ -104,12 +110,12 @@ class Diffusion():
 
         # return torch.exp(gamma / 2.)
 
-    def get_sigma_denoiser(self, step):
+    def get_sigma_denoiser(self, step: int) -> Tensor:
         alpha_bar = self.alphas_bar[step]
 
         return torch.sqrt((1. - alpha_bar) / alpha_bar)
 
-    def one_step_sampling(self, x, step):
+    def one_step_sampling(self, x: Tensor, step: int) -> tuple:
         assert step >= 0
 
         time = torch.tensor([step * self.scaling_term] * x.size(0), device=self.device).float()
@@ -129,62 +135,22 @@ class Diffusion():
 
         return x_next, approx_x
 
-    def full_sampling(self, y=None, ground_truth=None):
+    def full_sampling(self, y: Tensor = None, ground_truth: Tensor = None) -> Tensor:
         x_prev = torch.randn(self.size_noise, device=self.device)
 
-        step_set = tqdm(range(self.time_steps)[::-1]) if self.enable_log else range(self.time_steps)[::-1]
-
+        step_set = tqdm(range(self.time_steps)[::-1]) #if self.enable_log else range(self.time_steps)[::-1]
         for step in step_set:
             x_prev_unconditional, approx_x = self.one_step_sampling(x_prev, step)
 
             if self.measurement_step:
                 x_prev = self.measurement_step(x_next=x_prev_unconditional, x_prev=x_prev, approx_x=approx_x, y=y)
 
-            if ground_truth is not None:
+            if ground_truth is not None and self.enable_log:
                 self.logger.update_stats(**self.metric.eval(x_prev, ground_truth))
 
             if step % 100 == 0:
                 file_path = os.path.join("./generated_data/", f"progress/x_{str(step).zfill(4)}.png")
                 plt.imsave(file_path, prepare_image(x_prev))
-        return x_prev
-
-
-# old code
-# class ConditionalDiffusion(Diffusion):
-
-#     def __init__(self, size_noise, beta_start, beta_end, time_steps, model, device, transform, noise, enable_log=True):
-#         super().__init__(size_noise, beta_start, beta_end, time_steps, model, device, enable_batch_grad=True)
-
-#         self.transform = transform
-#         self.noise_distribution = noise
-
-#         self.enable_log = enable_log
-
-#     def grad_transform(self, x, approx_x, target):
-#         transformed_approx_x = self.transform.transform(approx_x)
-#         log_likelihood = self.noise_distribution.log_likelihood(target, transformed_approx_x)
-#         grad = torch.autograd.grad(outputs=log_likelihood, inputs=x)[0]
-
-#         return grad.detach()
-
-
-#     def one_step_conditional_denoising(self, x, target, step):
-#         x_prime, approx_x = self.one_step_denoising(x, step)
         
-#         zeta = 0.01
-#         grad_ = self.grad_transform(x, approx_x, target)
-
-#         x_prev = x_prime - zeta * grad_
-#         return x_prev
-
-#     def full_conditional_denoising(self, target):
-#         x_prev = torch.randn(self.size_noise)
-
-#         step_set = tqdm(range(self.time_steps)[::-1]) if self.enable_log else range(self.time_steps)[::-1]
-
-#         for step in step_set:
-#             x_prev = self.one_step_conditional_denoising(x_prev, target, step)
-#             if step % 100 == 0:
-#                 file_path = os.path.join("./generated_data/", f"progress/x_{str(step).zfill(4)}.png")
-#                 plt.imsave(file_path, prepare_image(x_prev))
-#         return x_prev
+        self.logger.update_stats(**self.metric.eval(x_prev, ground_truth))
+        return x_prev
