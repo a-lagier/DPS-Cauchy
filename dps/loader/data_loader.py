@@ -4,15 +4,18 @@ from torchvision.datasets import CIFAR10, CelebA
 from torch.utils.data import Dataset, DataLoader
 import os
 import matplotlib.pyplot as plt
-
+from random import shuffle
 
 class SamplesDataset(Dataset):
-    def __init__(self, image_dir, transform=None):
+    def __init__(self, image_dir, transform=None, num_images = -1):
         self.image_dir = image_dir
         self.transform = transform
         
         self.image_files = [f for f in os.listdir(image_dir)]
-        self.image_files.sort()
+        shuffle(self.image_files)
+
+        if num_images > 0:
+            self.image_files = self.image_files[:num_images]
     
     def __len__(self):
         return len(self.image_files)
@@ -25,7 +28,7 @@ class SamplesDataset(Dataset):
             image = self.transform(image)
         return image
 
-def prepare_dataset(dataset_name: str, dataset_dir: str = "./datasets/") -> Dataset:
+def prepare_dataset(dataset_name: str, dataset_dir: str = "./datasets/", num_images: int = -1) -> Dataset:
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize([.5, .5, .5], [.5, .5, .5])
@@ -34,8 +37,6 @@ def prepare_dataset(dataset_name: str, dataset_dir: str = "./datasets/") -> Data
     if dataset_name == "CIFAR10":
         dataset = CIFAR10(root=dataset_dir, train=True, transform=transform, download=True)
     elif dataset_name == "CelebA":
-        # The link for downloading CelebA is temporary down
-        # dataset = CelebA(root=dataset_dir, transform=transform, download=True)
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.CenterCrop(178),
@@ -43,12 +44,12 @@ def prepare_dataset(dataset_name: str, dataset_dir: str = "./datasets/") -> Data
             transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
         
-        dataset = SamplesDataset(os.path.join(dataset_dir, 'celeba'), transform=transform)
+        dataset = SamplesDataset(os.path.join(dataset_dir, 'celeba'), transform=transform, num_images=num_images)
     elif dataset_name == "MiniImageNet":
         pass
         # dataset = torchvision.datasets.MiniImageNet(root=dataset_dir, transform=transform, download=True)
     else:
-        dataset = SamplesDataset(os.path.join(dataset_dir, dataset_name), transform=transform)
+        dataset = SamplesDataset(os.path.join(dataset_dir, dataset_name), transform=transform, num_images=num_images)
         return dataset
     
     return dataset

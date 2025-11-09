@@ -39,6 +39,18 @@ class Noise():
     def log_likelihood(self, target: Tensor, x: Tensor) -> Tensor:
         return target - x
 
+@register_noise('clean')
+class Clean(Noise):
+
+    def __init__(self, **kwargs):
+        super().__init__()
+    
+    def apply(self, x: Tensor) -> Tensor:
+        return x
+    
+    def log_likelihood(self, target: Tensor, x: Tensor) -> Tensor:
+        return torch.linalg.norm(target - x)
+
 @register_noise('gaussian')
 class Gaussian(Noise):
     
@@ -113,10 +125,20 @@ class Operator():
         Ax = self.transform(approx_x)
         data_fidelity = noise.log_likelihood(y, Ax)
         grad_ = torch.autograd.grad(outputs=data_fidelity, inputs=x_prev)[0]
+        # grad_ = torch.autograd.grad(outputs=data_fidelity, inputs=approx_x)[0]
         grad_ = grad_.detach()
 
         # line 6 of algorithm 1
-        return x_next - scale * grad_
+        return x_next - scale * grad_ # / data_fidelity
+
+@register_operator('identity')
+class Identity(Operator):
+
+    def __init__(self, device: Device, **kwargs):
+        super().__init__()
+
+    def transform(self, x: Tensor) -> Tensor:
+        return x
 
 @register_operator('super-resolution')
 class SuperResolutionOperator(Operator):
@@ -141,12 +163,15 @@ class Inpainting(Operator):
         super().__init__()
 
         self.device = device
+        self.set_mask(**kwargs)
+    
+    def set_mask(self, **kwargs):
         image_size = kwargs.get('sample_size', None)
         mask_type = kwargs.get('mask_type', 'box')
         mask_size = kwargs.get('mask_size', 10)
         mask_density = kwargs.get('mask_density', 0.2)
 
-        self.mask = make_mask(image_size, mask_type, (mask_size, mask_size), mask_density).to(device)
+        self.mask = make_mask(image_size, mask_type, (mask_size, mask_size), mask_density).to(self.device)
 
     def transform(self, x: Tensor) -> Tensor:
         return x * self.mask

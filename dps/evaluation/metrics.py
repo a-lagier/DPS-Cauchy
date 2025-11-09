@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 from scipy.linalg import sqrtm
 from torchvision.models import inception_v3, Inception_V3_Weights
+import lpips
 
 from ..utils import clip_to_pixel
 
@@ -32,14 +33,18 @@ class Metric():
     def get_names(self):
         return []
     
-    def prepare_data(self, x: Tensor, y: Tensor) -> tuple:
+    def prepare_data(self, x: Tensor, y: Tensor, to_numpy=True) -> tuple:
         assert x.size(0) == y.size(0)
 
         x = x.reshape(x.size(0), -1)
         y = y.reshape(y.size(0), -1)
 
-        x = x.detach().cpu().numpy()
-        y = y.detach().cpu().numpy()
+        x = x.detach().cpu()
+        y = y.detach().cpu()
+
+        if to_numpy:
+            x = x.numpy()
+            y = y.numpy()
 
         return x, y
 
@@ -102,3 +107,21 @@ class FID(Metric):
         sigma_y = np.cov(y, rowvar=False)
 
         return {'fid': mu_mse + np.trace(sigma_x + sigma_y + 2 * sqrtm(sigma_x @ sigma_y).real)}
+
+
+@register_metric('lpips')
+class LPIPS(Metric):
+
+    def __init__(self, **kwargs):
+        super().__init__()
+
+        self.lpips = lpips.LPIPS(net='vgg')
+    
+    def get_names(self) -> list:
+        return ['lpips']
+    
+    def eval(self, x: Tensor, y: Tensor) -> dict:
+        x = x.detach().cpu()
+        y = y.detach().cpu()
+
+        return {'lpips': self.lpips(x, y).mean().item()}

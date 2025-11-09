@@ -1,8 +1,11 @@
 import os
 import sys
+import warnings
 import argparse
 import yaml
+from time import sleep
 from functools import partial
+from tqdm import tqdm
 
 import torch
 import matplotlib.pyplot as plt
@@ -17,13 +20,15 @@ from dps.loader.config_loader import load_parser, get_sample_size
 from dps.evaluation.metrics import get_metric
 from dps.loggers.logger import Logger
 
+warnings.filterwarnings('ignore')
+
 parser = load_parser()
 
 out_dir = parser["out_dir"]
 seed = parser["seed"]
-batch_size = parser["batch_size"]
 channels = parser["channels"]
 T = parser["steps"]
+batch_size = parser["batch_size"]
 sampling_size = parser["sampling_size"]
 device_str = parser["device"]
 device = torch.device(device_str)
@@ -31,10 +36,11 @@ sample_size = get_sample_size(parser)
 
 conditional_cfg = parser["conditional"]
 use_conditional = conditional_cfg["use_conditional"]
-dataset_name = conditional_cfg["dataset"]
-dataset_dir = conditional_cfg["dataset_dir"]
-operator = conditional_cfg["operator"]
-noise = conditional_cfg["noise"]
+
+dataset_cfg = conditional_cfg["dataset"]
+dataset_name = dataset_cfg["name"]
+dataset_dir = dataset_cfg["dataset_dir"]
+num_images = dataset_cfg["num_images"]
 
 torch.manual_seed(seed)
 
@@ -55,7 +61,8 @@ metric_cfg = parser["metric"]
 metric = get_metric(**metric_cfg)
 
 # Prepare logger
-logger = Logger(metric.get_names())
+log_name = '-'.join([operator_cfg["name"], noise_cfg["name"], dataset_cfg["name"]]) + '.log'
+logger = Logger(metric.get_names(), log_name=log_name)
 
 
 # put model choice inside sampler
@@ -65,7 +72,8 @@ model.load_ckpt(ckpt_path)
 model.to(device)
 model.eval()
 
-dataset = prepare_dataset(dataset_name=dataset_name, dataset_dir=dataset_dir)
+# prepare dataset and dataloader
+dataset = prepare_dataset(dataset_name=dataset_name, dataset_dir=dataset_dir, num_images=num_images)
 dataloader = prepare_dataloader(dataset, batch_size=batch_size)
 
 if use_conditional:
@@ -74,26 +82,23 @@ else:
     measurement_step = None
 
 sampler = Diffusion(size_noise=sample_size, beta_start=beta_start, beta_end=beta_end,
-                    time_steps=T, model=model, device=device, logger=logger, metric=metric, measurement_step=measurement_step,
-                    enable_log=False, enable_batch_grad=use_conditional)
+                    time_steps=T, device=device, logger=logger, metric=metric, measurement_step=measurement_step,
+                    enable_log=False, enable_batch_grad=use_conditional, save_dir=out_dir)
 
-# def tensor_size(x):
-#     # print(x.numel(), x.element_size())
-#     return x.numel() * x.element_size() / (1024**2)
-
-# def model_size(model):
-#     total = sum(p.numel() * p.element_size() for p in model.parameters())
-#     return total / (1024**2)
-
-for index, img in enumerate(dataloader):
+logger.write_config(parser)
+for index, img in tqdm(enumerate(dataloader), position=0):
     if isinstance(img, list):
         img = img[0]
+
+    # if inpainting we make new masks at each batch
+    if operator_cfg["name"] == 'inpainting':
+        operator.set_mask(**operator_cfg)
 
     img = img.to(device)
     batch_name = str(index).zfill(4) + ".png"
 
-    # check batch size reminder !!!!!!!!!!!!!!!!!
-    # lazy fix for now
+#     # check batch size reminder !!!!!!!!!!!!!!!!!
+#     # lazy fix for now
     if img.size(0) < batch_size:
         print('Batch size is too large of the remaining data')
         break
@@ -105,9 +110,9 @@ for index, img in enumerate(dataloader):
     else:
         y = None
 
-    output = sampler.full_sampling(y=y, ground_truth=img)
+    output = sampler.full_sampling(model, y=y, ground_truth=img)
 
-    logger.write_step()
+    logger.write_step(index)
 
     if use_conditional:
         plt.imsave(os.path.join(out_dir, "measure" + batch_name), prepare_image(y))
@@ -115,6 +120,5 @@ for index, img in enumerate(dataloader):
         plt.imsave(os.path.join(out_dir, "rec" + batch_name), prepare_image(output))
     else:
         plt.imsave(os.path.join(out_dir, batch_name), prepare_image(output))
-    break
 
-del model, dataset, dataloader
+logger.write_end_step()

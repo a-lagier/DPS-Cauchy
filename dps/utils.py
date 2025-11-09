@@ -22,14 +22,16 @@ def prepare_image(img: Tensor) -> Tensor:
     if img.ndim == 4 and img.size(0) > 1:
         img = img[0]
 
-    img = img.detach().cpu().squeeze()
+    img = img.detach().cpu().clone().squeeze()
     img = normalize(img).numpy()
     return np.transpose(img, (1, 2, 0))
 
 def normalize(image_tensor: Tensor) -> Tensor:
-    image_tensor -= image_tensor.min()
-    image_tensor /= image_tensor.max()
-    return image_tensor
+    min_ = image_tensor.min()
+    max_ = image_tensor.max()
+
+    out = (image_tensor - min_) / (max_ - min_ + 1e-8)
+    return out
 
 def batch(data: Tensor) -> Tensor:
     if data.ndim == 3:
@@ -68,8 +70,10 @@ def make_mask(image_size: tuple, mask_type: str = "box", mask_size: tuple = None
     if mask_type == "box":
         h_, w_ = mask_size
 
-        idx = random.randint(0, h - h_)
-        idy = random.randint(0, w - w_)
+        # idx = random.randint(0, h - h_)
+        # idy = random.randint(0, w - w_)
+        idx = image_size[2] // 3
+        idy = image_size[3] // 3
 
         mask = torch.ones((bsz, c, h, w), dtype=torch.bool)
         mask[:,:,idx:idx+h_+1,idy:idy+w_+1] = False

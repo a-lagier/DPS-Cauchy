@@ -1,6 +1,6 @@
 models/*
-generated_data/progress/*
-generated_data/*.png
+results/progress/*
+results/*.png
 TODO
 test.py
 datasets/*celeba*
@@ -8,4 +8,5 @@ datasets/*cifar*
 bkse/
 motionblur/
 .vscode/
+logs/*
 lab_ddpm.ipynb
