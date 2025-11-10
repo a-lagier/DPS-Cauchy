@@ -1,2 +1,2 @@
-cd ./generated_data
+cd ./results
 rm *.png

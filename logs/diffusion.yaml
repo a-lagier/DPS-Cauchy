@@ -1,0 +1,37 @@
+Experiment started at 2025-11-09 18:37:26.414055
+out_dir: ./results
+device: cuda:0
+sampling_size: 256
+model: unet
+ckpt_file: ./models/ffhq_10m.pt
+steps: 1000
+seed: 1
+channels: 3
+batch_size: 2
+conditional: 
+  use_conditional: True
+  scale: 0.1
+  dataset: 
+    name: CelebA
+    dataset_dir: ./datasets/
+    num_images: 250
+  operator: 
+    name: super-resolution
+    resolution_factor: 0.25
+    mask_type: box
+    mask_size: 128
+    mask_density: 0.9
+    kernel_size: 30
+    intensity: 0.5
+    oversampling: 1.0
+    sample_size: (2, 3, 256, 256)
+  noise: 
+    name: gaussian
+    std: 0.05
+    rate: 1.0
+    concentration: 0.5
+metric: 
+  name: ['lpips', 'psnr', 'fid']
+config_file: diffusion.yaml
+Step 0: {'lpips': 0.46229, 'min_psnr': 17.88117, 'avg_psnr': 19.56338, 'max_psnr': 21.24559, 'fid': 442.75599}
+Step 1: {'lpips': 0.42405, 'min_psnr': 19.84318, 'avg_psnr': 20.11723, 'max_psnr': 20.39127, 'fid': 1021.37105}

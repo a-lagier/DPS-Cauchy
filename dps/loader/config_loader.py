@@ -11,9 +11,12 @@ def load_yaml(file_path: str) -> dict:
 def load_parser() -> dict:
     parser_ = argparse.ArgumentParser()
     parser_.add_argument("--cfg", type=str)
+    parser_.add_argument('opts', default=None, nargs=argparse.REMAINDER)
     args = parser_.parse_args()
 
-    return load_yaml(args.cfg)
+    config = load_yaml(args.cfg)
+    config["config_file"] = args.cfg.split('/')[-1]
+    return config
 
 def get_sample_size(cfg: dict) -> tuple:
     batch_size = cfg["batch_size"]

@@ -95,6 +95,35 @@ class Binomial(Noise):
     def log_likelihood(self, target: Tensor, x: Tensor) -> Tensor:
         raise NotImplementedError()
 
+@register_noise('gamma')
+class Gamma(Noise):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.concentration = kwargs.get('concentration', 0.5)
+        self.rate = kwargs.get('rate', 1.0)
+        self.sampler = torch.distributions.gamma.Gamma(concentration=self.concentration, rate=self.rate)
+    
+    def log_likelihood(self, target: Tensor, x: Tensor) -> Tensor:
+        z = target - x
+        z_safe = torch.clamp(z, min=1e-8)
+
+        log_prob = (
+            (self.concentration - 1) * z * torch.log(z_safe)
+            - self.rate * z
+        )
+        return log_prob.mean()
+
+        alpha = self.concentration - 1
+        lamb = self.rate
+        def f(x):
+            return (x**2 / ((x/alpha) ** 2 + 1)) + lamb * x ** 2
+        # norm = torch.linalg.norm(target - x)
+        norm = f(target - x).mean()
+        print(norm.item())
+        # norm = alpha * (target - x) * (target - x).log() - lamb * (target - x)
+        # print(norm.mean().item())
+        return norm
+
 __OPERATOR__ = {}
 
 def register_operator(name: str):
@@ -116,10 +145,10 @@ class Operator():
         return
 
     def transform(self, x: Tensor) -> Tensor:
-        return
+        return x
     
     def inverse_transform(self, x: Tensor) -> Tensor:
-        return
+        return x
     
     def grad(self, x_next: Tensor, x_prev: Tensor, approx_x: Tensor, y: Tensor, noise: Tensor, scale: float = 1.0) -> Tensor:
         Ax = self.transform(approx_x)
@@ -127,6 +156,8 @@ class Operator():
         grad_ = torch.autograd.grad(outputs=data_fidelity, inputs=x_prev)[0]
         # grad_ = torch.autograd.grad(outputs=data_fidelity, inputs=approx_x)[0]
         grad_ = grad_.detach()
+
+        # print(img_range(grad_))
 
         # line 6 of algorithm 1
         return x_next - scale * grad_ # / data_fidelity
@@ -181,7 +212,7 @@ class Inpainting(Operator):
 
 
 
-# This operator class was taken from the original paper
+# This operator class was taken from the original code
 @register_operator('motion-blur')
 class MotionBlur(Operator):
     def __init__(self, device: Device, **kwargs):
@@ -211,7 +242,7 @@ class MotionBlur(Operator):
         return kernel.view(1, 1, self.kernel_size, self.kernel_size)
 
 
-# This operator class was taken from the original paper
+# This operator class was taken from the original code
 @register_operator('gaussian-blur')
 class GaussialBlur(Operator):
     def __init__(self, device: Device, **kwargs):
@@ -262,7 +293,37 @@ class PhaseRetrieval(Operator):
         data = torch.view_as_complex(data)
         data = data.abs().float()
 
+        data = 2 * data - 1
         return data
     
     def inverse_transform(self, data: Tensor) -> Tensor:
         return data
+
+# This operator class was taken from the original code
+@register_operator(name='nonlinear-blur')
+class NonlinearBlurOperator(Operator):
+    def __init__(self, opt_yml_path, device):
+        self.device = device
+        self.blur_model = self.prepare_nonlinear_blur_model(opt_yml_path)     
+         
+    def prepare_nonlinear_blur_model(self, opt_yml_path):
+        '''
+        Nonlinear deblur requires external codes (bkse).
+        '''
+        from bkse.models.kernel_encoding.kernel_wizard import KernelWizard
+
+        with open(opt_yml_path, "r") as f:
+            opt = yaml.safe_load(f)["KernelWizard"]
+            model_path = opt["pretrained"]
+        blur_model = KernelWizard(opt)
+        blur_model.eval()
+        blur_model.load_state_dict(torch.load(model_path)) 
+        blur_model = blur_model.to(self.device)
+        return blur_model
+    
+    def forward(self, data, **kwargs):
+        random_kernel = torch.randn(1, 512, 2, 2).to(self.device) * 1.2
+        data = (data + 1.0) / 2.0  #[-1, 1] -> [0, 1]
+        blurred = self.blur_model.adaptKernel(data, kernel=random_kernel)
+        blurred = (blurred * 2.0 - 1.0).clamp(-1, 1) #[0, 1] -> [-1, 1]
+        return blurred

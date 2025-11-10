@@ -6,10 +6,10 @@ ckpt_file: ./models/ffhq_10m.pt
 steps: 1000
 seed: 1
 channels: 3
-batch_size: 2
+batch_size: 10
 conditional:
   use_conditional: True
-  scale: 0.1
+  scale: 0.5
   dataset:
     name: CelebA
     dataset_dir: ./datasets/
@@ -17,16 +17,8 @@ conditional:
   operator:
     name: super-resolution
     resolution_factor: 0.25
-    mask_type: box # random or box
-    mask_size: 128
-    mask_density: 0.9
-    kernel_size : 30
-    intensity: 0.5
-    oversampling: 1.0
   noise:
     name: gaussian
     std: 0.05
-    rate: 1.0
-    concentration: 0.5
 metric:
-  name: [lpips, psnr, fid]
+  name: [lpips, psnr]

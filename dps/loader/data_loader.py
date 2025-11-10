@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 import os
 import matplotlib.pyplot as plt
 from random import shuffle
+# fix random.seed in main
 
 class SamplesDataset(Dataset):
     def __init__(self, image_dir, transform=None, num_images = -1):
