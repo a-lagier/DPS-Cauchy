@@ -8,5 +8,5 @@ datasets/*cifar*
 bkse/
 motionblur/
 .vscode/
-logs/*
+logs/*.log
 lab_ddpm.ipynb

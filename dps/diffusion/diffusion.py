@@ -158,7 +158,7 @@ class Diffusion():
             if ground_truth is not None and self.enable_log:
                 self.logger.update_stats(**self.metric.eval(x_prev, ground_truth))
 
-            if step % 10 == 0:
+            if step % 200 == 0:
                 file_path = os.path.join(self.save_dir, f"progress/x_{str(step).zfill(4)}.png")
                 plt.imsave(file_path, prepare_image(x_prev))
                 plt.close('all')
