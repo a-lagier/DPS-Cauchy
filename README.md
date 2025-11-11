@@ -1,5 +1,7 @@
 # DPS with non exponential noise
 
+Implementation of Diffusion Posterior Sampling [Chung et al.2022]
+
 ## Getting Started
 
 Clone the repository
@@ -7,10 +9,11 @@ Clone the repository
 ```
 git clone https://github.com/a-lagier/DPS-reimplementation
 
-cd diffusion-posterior-sampling
+cd DPS-reimplementation
 ```
 
 ### Other code projects to import
+
 We use the external codes for motion-blurring and non-linear deblurring.
 
 ```
@@ -32,25 +35,34 @@ pip install torch torchvision deepinv lpips gdown datetime
 ```
 
 ### Download pretrained checkpoint
+
 From the [link](https://drive.google.com/drive/folders/1jElnRoFv7b31fG0v6pTSQkelbSX3xGZh?usp=sharing), download the checkpoint "ffhq_10m.pt" and paste it to ./models/
+
 ```
 mkdir models
 mv {DOWNLOAD_DIR}/ffqh_10m.pt ./models/
 ```
+
 {DOWNLOAD_DIR} is the directory that you downloaded checkpoint to.
 
 ### Side Note
+
 If necessary create the following folders
+
 ```
 mkdir -p results/progress logs models
 ```
 
 ## Inference
+
 The dir configs/ will contain basic DPS configs ready to be ran with the following command
+
 ```
 python main.py --cfg configs/motion-blur-cauchy-celeba.yaml
 ```
+
 Here is the content of the file configs/motion-blur-cauchy-celeba.yaml
+
 ```
 out_dir: ./results
 device: cuda:0
@@ -80,4 +92,5 @@ metric:
 ```
 
 ### Author
+
 Alexandre Lagier
