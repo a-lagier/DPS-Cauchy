@@ -39,6 +39,12 @@ mv {DOWNLOAD_DIR}/ffqh_10m.pt ./models/
 ```
 {DOWNLOAD_DIR} is the directory that you downloaded checkpoint to.
 
+### Side Note
+If necessary create the following folders
+```
+mkdir -p results/progress logs models
+```
+
 ## Inference
 The dir configs/ will contain basic DPS configs ready to be ran with the following command
 ```
@@ -73,14 +79,5 @@ metric:
   name: [lpips, psnr]
 ```
 
-## TODO : code implementation
-
-* U-net (ResNet, Attention block,...) : adapt each method with time integration
-* Gaussian Diffusion
-* Conditional diffusion
-* Transformation y = Ax + n
-
-## Edit packages
-
-* "/Users/alexandre/opt/anaconda3/envs/DPS/lib/python3.8/site-packages/deepinv/training/trainer.py", line 138, in Trainer
-  scheduler: torch.optim.lr_scheduler.LRScheduler = None change to _LRScheduler
+### Author
+Alexandre Lagier

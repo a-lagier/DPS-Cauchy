@@ -1,5 +1,5 @@
-models/*
-results/progress/*
+models/*.pt
+results/progress/*.png
 results/*.png
 TODO
 test.py
