@@ -6,7 +6,7 @@ ckpt_file: ./models/ffhq_10m.pt
 steps: 1000
 seed: 1
 channels: 3
-batch_size: 1
+batch_size: 5
 conditional:
   use_conditional: True
   scale: 1.0
@@ -15,17 +15,11 @@ conditional:
     dataset_dir: ./datasets/
     num_images: 250
   operator:
-    name: [inpainting, super-resolution]
-    resolution_factor: 0.25
-    mask_type: box # random or box
-    mask_size: 128
-    mask_density: 0.9
-    kernel_size : 30
+    name: motion-blur
+    kernel_size : 61
     intensity: 0.5
-    oversampling: 1.0
   noise:
     name: gaussian
-    rate: 1.0
-    std: 0.05
+    std: 0.10
 metric:
   name: [lpips, psnr]

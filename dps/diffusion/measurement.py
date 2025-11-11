@@ -106,9 +106,13 @@ def register_operator(name: str):
     return wrapper
 
 def get_operator(name: str, **kwargs):
-    if __OPERATOR__.get(name, None) is None:
-        raise NameError(f"Name {name} is not defined.")
-    return __OPERATOR__[name](**kwargs)
+    if isinstance(name, list):
+        return OperatorWrapper([__OPERATOR__[n](**kwargs) for n in name])
+    else:
+        if __OPERATOR__.get(name, None) is None:
+            raise NameError(f"Name {name} is not defined.")
+        return __OPERATOR__[name](**kwargs)
+
 
 class Operator():
 
@@ -130,6 +134,17 @@ class Operator():
 
         # line 6 of algorithm 1
         return x_next - scale * grad_ # / data_fidelity
+
+class OperatorWrapper(Operator):
+
+    def __init__(self, operators: list):
+        self.operators = operators
+    
+    def transform(self, x: Tensor) -> Tensor:
+        x_ = x
+        for op in self.operators:
+            x_ = op.transform(x_)
+        return x_
 
 @register_operator('identity')
 class Identity(Operator):

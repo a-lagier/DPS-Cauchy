@@ -61,7 +61,8 @@ metric_cfg = parser["metric"]
 metric = get_metric(**metric_cfg)
 
 # Prepare logger
-log_name = '-'.join([operator_cfg["name"], noise_cfg["name"], dataset_cfg["name"]]) + '.log'
+# log_name = '-'.join([operator_cfg["name"], noise_cfg["name"], dataset_cfg["name"]]) + '.log'
+log_name = parser["config_file"].split('.')[0] + '.log'
 logger = Logger(metric.get_names(), log_name=log_name)
 
 
@@ -97,8 +98,8 @@ for index, img in tqdm(enumerate(dataloader), position=0):
     img = img.to(device)
     batch_name = str(index).zfill(4) + ".png"
 
-#     # check batch size reminder !!!!!!!!!!!!!!!!!
-#     # lazy fix for now
+    # check batch size reminder !!!!!!!!!!!!!!!!!
+    # lazy fix for now
     if img.size(0) < batch_size:
         print('Batch size is too large of the remaining data')
         break

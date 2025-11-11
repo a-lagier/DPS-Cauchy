@@ -20,10 +20,14 @@ def register_metric(name: str):
         return cls
     return wrapper
 
-def get_metric(name: str, **kwargs):
-    if __METRIC__.get(name, None) is None:
-        raise NameError(f"Name {name} is not defined.")
-    return __METRIC__[name](**kwargs)
+def get_metric(name, **kwargs):
+    if isinstance(name, list):
+        return MetricWrapper([__METRIC__[n](**kwargs) for n in name])
+    else:
+        if __METRIC__.get(name, None) is None:
+            raise NameError(f"Name {name} is not defined.")
+        return __METRIC__[name](**kwargs)
+
 
 class Metric():
 
@@ -52,6 +56,16 @@ class Metric():
         x, y = self.prepare_data(x, y)
 
         return {'mse': np.abs(x - y).mean(-1)}
+
+class MetricWrapper(Metric):
+    def __init__(self, metrics):
+        self.metrics = metrics
+
+    def get_names(self) -> list:
+        return sum([m.get_names() for m in self.metrics], [])
+
+    def eval(self, x: Tensor, y: Tensor) -> Tensor:
+        return {k: v for m in self.metrics for k,v in m.eval(x,y).items()}
 
 @register_metric('psnr')
 class PSNR(Metric):

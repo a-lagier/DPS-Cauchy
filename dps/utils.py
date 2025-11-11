@@ -70,10 +70,8 @@ def make_mask(image_size: tuple, mask_type: str = "box", mask_size: tuple = None
     if mask_type == "box":
         h_, w_ = mask_size
 
-        # idx = random.randint(0, h - h_)
-        # idy = random.randint(0, w - w_)
-        idx = image_size[2] // 3
-        idy = image_size[3] // 3
+        idx = random.randint(0, h - h_)
+        idy = random.randint(0, w - w_)
 
         mask = torch.ones((bsz, c, h, w), dtype=torch.bool)
         mask[:,:,idx:idx+h_+1,idy:idy+w_+1] = False
