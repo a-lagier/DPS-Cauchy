@@ -6,6 +6,7 @@ import yaml
 from time import sleep
 from functools import partial
 from tqdm import tqdm
+import random
 
 import torch
 import matplotlib.pyplot as plt
@@ -42,6 +43,7 @@ dataset_name = dataset_cfg["name"]
 dataset_dir = dataset_cfg["dataset_dir"]
 num_images = dataset_cfg["num_images"]
 
+random.seed(seed)
 torch.manual_seed(seed)
 
 beta_start = 1e-4
@@ -78,7 +80,7 @@ dataset = prepare_dataset(dataset_name=dataset_name, dataset_dir=dataset_dir, nu
 dataloader = prepare_dataloader(dataset, batch_size=batch_size)
 
 if use_conditional:
-    measurement_step = partial(operator.grad, noise=noise, scale=scale)
+    measurement_step = partial(operator.grad_compute, noise=noise, scale=scale)
 else:
     measurement_step = None
 
@@ -94,7 +96,6 @@ for index, img in tqdm(enumerate(dataloader), position=0):
     # check batch size reminder !!!!!!!!!!!!!!!!!
     # lazy fix for now
     if img.size(0) < batch_size:
-        operator_cfg["sampling"]
         print('Batch size is too large of the remaining data')
         break
 

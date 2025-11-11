@@ -4,21 +4,22 @@ sampling_size: 256 # if conditional choose it accordingly with dataset image siz
 model: unet
 ckpt_file: ./models/ffhq_10m.pt
 steps: 1000
-seed: 2
+seed: 0
 channels: 3
 batch_size: 10
 conditional:
   use_conditional: True
-  scale: 0.4
+  scale: 1.0
   dataset:
     name: CelebA
     dataset_dir: ./datasets/
     num_images: 250
   operator:
-    name: phase-retrieval
-    oversampling: 2.0
+    name: gaussian-blur
+    kernel_size : 61
+    intensity: 3.0
   noise:
-    name: gaussian
-    std: 0.05
+    name: cauchy
+    scale: 1.0
 metric:
   name: [lpips, psnr]

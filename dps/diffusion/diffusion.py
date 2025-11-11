@@ -149,8 +149,9 @@ class Diffusion():
             x_prev_unconditional, approx_x = self.one_step_sampling(x_prev, model, step)
 
             if self.measurement_step:
-                x_prev = self.measurement_step(x_next=x_prev_unconditional, x_prev=x_prev, approx_x=approx_x, y=y)
+                x_prev, norm = self.measurement_step(x_next=x_prev_unconditional, x_prev=x_prev, approx_x=approx_x, y=y, step=step)
                 x_prev = x_prev.detach()
+                step_set.set_postfix({'norm': norm.item()}, refresh=False)
             else:
                 x_prev = x_prev_unconditional.detach()          
 

@@ -3,22 +3,30 @@ device: cuda:0
 sampling_size: 256 # if conditional choose it accordingly with dataset image size
 model: unet
 ckpt_file: ./models/ffhq_10m.pt
-steps: 1000
-seed: 2
+steps: 500
+seed: 0
 channels: 3
 batch_size: 10
 conditional:
   use_conditional: True
-  scale: 0.4
+  scale: 1.0
   dataset:
     name: CelebA
     dataset_dir: ./datasets/
     num_images: 250
   operator:
-    name: phase-retrieval
+    name: super-resolution
+    resolution_factor: 0.25
+    mask_type: box # random or box
+    mask_size: 128
+    mask_density: 0.9
+    kernel_size : 30
+    intensity: 0.5
     oversampling: 2.0
   noise:
     name: gaussian
     std: 0.05
+    rate: 1.0
+    concentration: 0.5
 metric:
   name: [lpips, psnr]

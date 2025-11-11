@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from motionblur.motionblur import Kernel
 
-from ..utils import make_mask, img_range, clip_to_noise, Blurkernel
+from ..utils import make_mask, img_range, clip_to_noise, Blurkernel, normalize
 
 Tensor = torch.Tensor
 Device = torch.device
@@ -73,7 +73,7 @@ class Poisson(Noise):
     
     def apply(self, x: Tensor) -> Tensor:
         # TODO : clean the noisy poisson implementation
-        pixel_x = ((x + 1.0) * 255 / 2).int()
+        pixel_x = ((x + 1.0) * 255 / 2).detach()
         pixel_out = pixel_x + self.sample(pixel_x.shape).to(x.device)
         pixel_out = torch.clamp(pixel_out, 0, 255)
         out = clip_to_noise(pixel_out.float() / 255.0)
@@ -119,10 +119,28 @@ class Gamma(Noise):
             return (x**2 / ((x/alpha) ** 2 + 1)) + lamb * x ** 2
         # norm = torch.linalg.norm(target - x)
         norm = f(target - x).mean()
-        print(norm.item())
         # norm = alpha * (target - x) * (target - x).log() - lamb * (target - x)
         # print(norm.mean().item())
         return norm
+
+@register_noise('cauchy')
+class Cauchy(Noise):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.scale = kwargs.get('scale', 0.1)
+        self.location = kwargs.get('location', 0.0)
+        self.sampler = torch.distributions.cauchy.Cauchy(self.location, self.scale)
+    
+    def apply(self, x:Tensor) -> Tensor:
+        pixel_x = ((x + 1.0) * 255 / 2)
+        pixel_out = pixel_x + self.sample(pixel_x.shape).to(x.device)
+        pixel_out = torch.clamp(pixel_out, 0, 255)
+        out = clip_to_noise(pixel_out.float() / 255.0)
+        return out
+
+    def log_likelihood(self, target: Tensor, x:Tensor) -> Tensor:
+        return torch.linalg.norm(target - x) / self.scale ** 2
+
 
 __OPERATOR__ = {}
 
@@ -150,17 +168,24 @@ class Operator():
     def inverse_transform(self, x: Tensor) -> Tensor:
         return x
     
-    def grad(self, x_next: Tensor, x_prev: Tensor, approx_x: Tensor, y: Tensor, noise: Tensor, scale: float = 1.0) -> Tensor:
+    def grad_compute(self, x_next: Tensor, x_prev: Tensor, approx_x: Tensor, y: Tensor, noise: Noise, scale: float = 1.0, **kwargs) -> Tensor:
         Ax = self.transform(approx_x)
         data_fidelity = noise.log_likelihood(y, Ax)
         grad_ = torch.autograd.grad(outputs=data_fidelity, inputs=x_prev)[0]
         # grad_ = torch.autograd.grad(outputs=data_fidelity, inputs=approx_x)[0]
         grad_ = grad_.detach()
-
-        # print(img_range(grad_))
+        data_fidelity = data_fidelity.detach()
+        # print("y", img_range(y))
+        # print("Ax", img_range(Ax))
+        # print("norm", data_fidelity.item())
+        # print("grad_norm", img_range(grad_))
 
         # line 6 of algorithm 1
-        return x_next - scale * grad_ # / data_fidelity
+        # step = kwargs.get('step', -1)
+        # if step >= 900:
+        #     return x_next, data_fidelity
+        x_next -= scale * grad_
+        return x_next, data_fidelity
 
 @register_operator('identity')
 class Identity(Operator):
@@ -273,13 +298,14 @@ class GaussialBlur(Operator):
 class PhaseRetrieval(Operator):
 
     def __init__(self, device: Device, **kwargs):
+        super().__init__()
         self.device = device
         
         oversample = kwargs.get("oversample", 2.0)
         self.pad_dim = int(oversample / 8.0 * 256)
 
     def transform(self, data: Tensor) -> Tensor:
-        data = F.pad(data, (self.pad_dim, ) * data.ndim)
+        data = F.pad(data, (self.pad_dim, self.pad_dim, self.pad_dim, self.pad_dim))
 
         if not torch.is_complex(data):
             data = data.type(torch.complex64)
@@ -287,43 +313,44 @@ class PhaseRetrieval(Operator):
         data = torch.view_as_real(data)
         data = torch.fft.ifftshift(data, dim=[-3, -2])
         data = torch.view_as_complex(data)
-        data = torch.fft.fft2(data, norm='ortho')
+        data = torch.fft.fftn(data, dim=(-2, -1), norm='ortho')
         data = torch.view_as_real(data)
-        data = torch.fft.fftshift(data, dim=[-3, -2])
+        data = torch.fft.fftshift(data, dim=[-2, -1])
         data = torch.view_as_complex(data)
-        data = data.abs().float()
+        data = data.abs()
 
-        data = 2 * data - 1
+        # data = normalize(data)
+
         return data
     
     def inverse_transform(self, data: Tensor) -> Tensor:
         return data
 
-# This operator class was taken from the original code
-@register_operator(name='nonlinear-blur')
-class NonlinearBlurOperator(Operator):
-    def __init__(self, opt_yml_path, device):
-        self.device = device
-        self.blur_model = self.prepare_nonlinear_blur_model(opt_yml_path)     
+# # This operator class was taken from the original code
+# @register_operator(name='nonlinear-blur')
+# class NonlinearBlurOperator(Operator):
+#     def __init__(self, opt_yml_path, device):
+#         self.device = device
+#         self.blur_model = self.prepare_nonlinear_blur_model(opt_yml_path)     
          
-    def prepare_nonlinear_blur_model(self, opt_yml_path):
-        '''
-        Nonlinear deblur requires external codes (bkse).
-        '''
-        from bkse.models.kernel_encoding.kernel_wizard import KernelWizard
+#     def prepare_nonlinear_blur_model(self, opt_yml_path):
+#         '''
+#         Nonlinear deblur requires external codes (bkse).
+#         '''
+#         from bkse.models.kernel_encoding.kernel_wizard import KernelWizard
 
-        with open(opt_yml_path, "r") as f:
-            opt = yaml.safe_load(f)["KernelWizard"]
-            model_path = opt["pretrained"]
-        blur_model = KernelWizard(opt)
-        blur_model.eval()
-        blur_model.load_state_dict(torch.load(model_path)) 
-        blur_model = blur_model.to(self.device)
-        return blur_model
+#         with open(opt_yml_path, "r") as f:
+#             opt = yaml.safe_load(f)["KernelWizard"]
+#             model_path = opt["pretrained"]
+#         blur_model = KernelWizard(opt)
+#         blur_model.eval()
+#         blur_model.load_state_dict(torch.load(model_path)) 
+#         blur_model = blur_model.to(self.device)
+#         return blur_model
     
-    def forward(self, data, **kwargs):
-        random_kernel = torch.randn(1, 512, 2, 2).to(self.device) * 1.2
-        data = (data + 1.0) / 2.0  #[-1, 1] -> [0, 1]
-        blurred = self.blur_model.adaptKernel(data, kernel=random_kernel)
-        blurred = (blurred * 2.0 - 1.0).clamp(-1, 1) #[0, 1] -> [-1, 1]
-        return blurred
+#     def forward(self, data, **kwargs):
+#         random_kernel = torch.randn(1, 512, 2, 2).to(self.device) * 1.2
+#         data = (data + 1.0) / 2.0  #[-1, 1] -> [0, 1]
+#         blurred = self.blur_model.adaptKernel(data, kernel=random_kernel)
+#         blurred = (blurred * 2.0 - 1.0).clamp(-1, 1) #[0, 1] -> [-1, 1]
+#         return blurred
