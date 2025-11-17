@@ -63,17 +63,15 @@ metric_cfg = parser["metric"]
 metric = get_metric(**metric_cfg)
 
 # Prepare logger
-#log_name = '-'.join([operator_cfg["name"], noise_cfg["name"], dataset_cfg["name"]]) + '.log'
 log_name = parser["config_file"].split('.')[0] + '.log'
 logger = Logger(metric.get_names(), log_name=log_name)
 
 
 # put model choice inside sampler
 ckpt_path = parser["ckpt_file"]
-model = UNet(channels,channels)
-model.load_ckpt(ckpt_path)
+large_model = parser["large_unet"]
+model = UNet(channels, channels, large_model)
 model.to(device)
-model.eval()
 
 # prepare dataset and dataloader
 dataset = prepare_dataset(dataset_name=dataset_name, dataset_dir=dataset_dir, num_images=num_images)
