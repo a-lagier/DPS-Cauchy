@@ -2,6 +2,19 @@
 
 Implementation of Diffusion Posterior Sampling [[Chung et al.2022]](https://arxiv.org/abs/2209.14687) and extension to Noisy Inverse Problem with Cauchy Noise.
 
+<table align="center">
+  <tr>
+    <td><img src="./imgs/ip_c_celeba_measure.png" width="250"></td>
+    <td><img src="./imgs/ip_c_celeba_rec.png" width="250"></td>
+    <td><img src="./imgs/ip_c_celeba_truth.png" width="250"></td>
+  </tr>
+  <tr>
+    <td align="center">Measure (Cauchy noise)</td>
+    <td align="center">Reconstruction</td>
+    <td align="center">Truth</td>
+  </tr>
+</table>
+
 ## Diffusion Posterior Sampling
 
 DPS main principle is to sample images from the posterior distribution $\mathbf{x}_t | \mathbf{y}$ using the following reverse SDE in order to recover $\mathbf{x}_0$ from $\mathbf{y} = \mathcal{A}(\mathbf{x}_0) + \mathbf{n}$
@@ -19,7 +32,7 @@ $$
 The first term is an unconditional score that can be approximated using a neural network trained with denoising score matching. As shown below, the log-likelihood is still untractable because $\mathbf{x}_t$ and $\mathbf{y}$ are not directly related.
 
 <p style="text-align:center">
-  <img src="./probabilistic_diagram.png" alt="Probabilistic Diagram" width="30%">
+  <img src="./imgs/probabilistic_diagram.png" alt="Probabilistic Diagram" width="30%">
 </p>
 
 The further approximation makes the term tractable $`\nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_t) \approx \nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_0)`$. The form of the distribution $p_t(\mathbf{y} | \mathbf{x}_0)$ only depends on the distribution of the noise $\mathbf{n}$. 
@@ -83,7 +96,7 @@ pip install torch torchvision deepinv lpips gdown datetime
 
 ### Download pretrained checkpoint
 
-From the [link](https://drive.google.com/drive/folders/1jElnRoFv7b31fG0v6pTSQkelbSX3xGZh?usp=sharing), download the checkpoint "ffhq_10m.pt" and paste it to ./models/
+From this [link](https://drive.google.com/drive/folders/1jElnRoFv7b31fG0v6pTSQkelbSX3xGZh?usp=sharing), download the checkpoint "ffhq_10m.pt" and paste it to ./models/
 
 ```
 mkdir models
