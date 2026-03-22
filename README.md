@@ -25,17 +25,20 @@ The first term is an unconditional score that can be approximated using a neural
 The further approximation makes the term tractable $\nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_t) \approx \nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_0)$. The form of the distribution $p_t(\mathbf{y} | \mathbf{x}_0)$ only depends on the distribution of the noise $\mathbf{n}$. 
 
 If $\mathbf{n} \sim \mathcal{N}(0, \sigma^2\mathbf{I})$ then,
+
 $$
 \nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_0) = -\dfrac{1}{2\sigma^2}\nabla_{\mathbf{x}_t}||\mathbf{y} - \mathcal{A}(\mathbf{x}_0)||_2^2
 $$
 
 If $\mathbf{n} \sim \mathcal{P}(\lambda)$, the authors shows that we can use the following approximation
+
 $$
 \nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_0) \approx -\nabla_{\mathbf{x}_t}||\mathbf{y} - \mathcal{A}(\mathbf{x}_0)||_\mathbf{\Lambda}^2, \quad [\mathbf{\Lambda}]_{ii} = \dfrac{1}{2\mathbf{y}_i}
 $$
 where $||\mathbf{a}||_\mathbf{\Lambda}^2 = \mathbf{a}^\top\mathbf{\Lambda}\mathbf{a}$.
 
 Below, we suggest a novel approximation for the case of Cauchy noise, a non-exponential noise with heavy tail. If $\mathbf{n} \sim \text{Cauchy}(\gamma)$ then,
+
 $$
 \nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_0) \approx -\dfrac{1}{\gamma^2}\nabla_{\mathbf{x}_t}||\mathbf{y} - \mathcal{A}(\mathbf{x}_0)||_2^2
 $$
