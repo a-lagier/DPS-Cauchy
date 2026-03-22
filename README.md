@@ -35,6 +35,7 @@ If $\mathbf{n} \sim \mathcal{P}(\lambda)$, the authors shows that we can use the
 $$
 \nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_0) \approx -\nabla_{\mathbf{x}_t}||\mathbf{y} - \mathcal{A}(\mathbf{x}_0)||_\mathbf{\Lambda}^2, \quad [\mathbf{\Lambda}]_{ii} = \dfrac{1}{2\mathbf{y}_i}
 $$
+
 where $||\mathbf{a}||_\mathbf{\Lambda}^2 = \mathbf{a}^\top\mathbf{\Lambda}\mathbf{a}$.
 
 Below, we suggest a novel approximation for the case of Cauchy noise, a non-exponential noise with heavy tail. If $\mathbf{n} \sim \text{Cauchy}(\gamma)$ then,
@@ -43,7 +44,7 @@ $$
 \nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_0) \approx -\dfrac{1}{\gamma^2}\nabla_{\mathbf{x}_t}||\mathbf{y} - \mathcal{A}(\mathbf{x}_0)||_2^2
 $$
 
-(Justification of the latter approximation can be found in the report in the repo)
+(Justification of the latter approximation can be found in the report included in the repository)
 
 All those approximations are gradient steps on the data fidelity term, thus easy to implement whatever the operator $\mathcal{A}$.
 
