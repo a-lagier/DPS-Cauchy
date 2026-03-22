@@ -18,7 +18,7 @@ $$
 
 The first term is an unconditional score that can be approximated using a neural network trained with denoising score matching. As shown below, the log-likelihood is still untractable because $\mathbf{x}_t$ and $\mathbf{y}$ are not directly related.
 
-<p align="text-align:center">
+<p style="text-align:center">
   <img src="./probabilistic_diagram.png" alt="Probabilistic Diagram" width="30%">
 </p>
 
