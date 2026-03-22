@@ -18,13 +18,11 @@ $$
 
 The first term is an unconditional score that can be approximated using a neural network trained with denoising score matching. As shown below, the log-likelihood is still untractable because $\mathbf{x}_t$ and $\mathbf{y}$ are not directly related.
 
-<div style="text-align:center">
+<p align="text-align:center">
   <img src="./probabilistic_diagram.png" alt="Probabilistic Diagram" width="30%">
-</div>
+</p>
 
-The further approximation makes the term tractable $\nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_t) \approx \nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_0)$. 
-
-The form of the distribution $p_t(\mathbf{y} | \mathbf{x}_0)$ only depends on the distribution of the noise $\mathbf{n}$. 
+The further approximation makes the term tractable $\nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_t) \approx \nabla_{\mathbf{x}_t}\log p_t(\mathbf{y} | \mathbf{x}_0)$. The form of the distribution $p_t(\mathbf{y} | \mathbf{x}_0)$ only depends on the distribution of the noise $\mathbf{n}$. 
 
 If $\mathbf{n} \sim \mathcal{N}(0, \sigma^2\mathbf{I})$ then,
 
