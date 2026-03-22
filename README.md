@@ -4,7 +4,7 @@ Implementation of Diffusion Posterior Sampling [[Chung et al.2022]](https://arxi
 
 ## Diffusion Posterior Sampling
 
-DPS main principle is to sample images from the posterior distribution $\mathbf{x}_t | \mathbf{y}$ using the following reverse SDE in order to recover $\mathbf{x}_0$ from $\mathbf{y} = \mathcal{A}(\mathcal{x}_0) + \mathbf{n}$
+DPS main principle is to sample images from the posterior distribution $\mathbf{x}_t | \mathbf{y}$ using the following reverse SDE in order to recover $\mathbf{x}_0$ from $\mathbf{y} = \mathcal{A}(\mathbf{x}_0) + \mathbf{n}$
 
 $$
 d\mathbf{x} = \left[ -\dfrac{\beta(t)}{2}\mathbf{x} - \beta(t)\nabla_{\mathbf{x}_t}\log p_t(\mathbf{x}_t | \mathbf{y})\right]dt + \sqrt{\beta(t)}d\overline w
