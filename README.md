@@ -1,6 +1,6 @@
 # DPS with non exponential noise
 
-Implementation of Diffusion Posterior Sampling [Chung et al.2022]
+Implementation of Diffusion Posterior Sampling [Chung et al.2022] and extension to Noisy Inverse Problem with Cauchy Noise.
 
 ## Getting Started
 
